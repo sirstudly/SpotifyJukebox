@@ -116,7 +116,8 @@ class Messenger {
                 if (this.isSenderOnBlacklist(event.sender.id)) {
                     break;
                 }
-                else if (await this.isTrackQueued(event.sender.id, payload.track)) {
+                else if (this.isTrackQueued(payload.track)) {
+                    await this.getStatus(event.sender.id); // sends current queue
                     await this.sendMessage(event.sender.id, {text: "This track has already been queued."});
                     break;
                 }
@@ -223,8 +224,8 @@ class Messenger {
         return false;
     }
 
-    async isTrackQueued(sender, trackId) {
-        let nowPlaying = await this.getStatus(sender);
+    isTrackQueued(trackId) {
+        let nowPlaying = spotify.getStatus();
         if (nowPlaying.queued_tracks && nowPlaying.queued_tracks.length) {
             return nowPlaying.queued_tracks.filter(t => t.id == trackId).length > 0;
         }
