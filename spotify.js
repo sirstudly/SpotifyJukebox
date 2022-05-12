@@ -5,6 +5,8 @@ const {Builder, By, Key, until} = require('selenium-webdriver');
 const chrome = require("selenium-webdriver/chrome");
 const fs = require("fs");
 const cq = require('concurrent-queue');
+const dotenv = require("dotenv");
+dotenv.config();
 const DEFAULT_WAIT_MS = 30000;
 
 class Spotify {
@@ -192,7 +194,7 @@ class Spotify {
     }
 
     async _getNgrokEndpoint() {
-        await this.driver.get("http://localhost:4040/status");
+        await this.driver.get("http://localhost:" + process.env.NGROK_PORT + "/status");
         const ngrok_url = await this.driver.wait(until.elementLocated(By.xpath(
             "//h4[text()='command_line']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
         this.consoleInfo("ngrok URL:", ngrok_url);

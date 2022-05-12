@@ -161,7 +161,7 @@ app.get("/dump-webpage", async (req, res) => {
 });
 
 app.get("/dump-ngrok", async (req, res) => {
-    spotify.takeScreenshot("http://localhost:4040/status", "currentpage.png")
+    spotify.takeScreenshot("http://localhost:" + process.env.NGROK_PORT + "/status", "currentpage.png")
         .then(() => res.sendFile(path.join(__dirname, 'currentpage.png')))
         .catch(err => res.status(500).send({error: err.message}));
 });
