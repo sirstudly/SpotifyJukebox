@@ -35,20 +35,18 @@ async function updateSpotifyCallback(driver, ngrokCallbackUrl) {
         await driver.get("https://developer.spotify.com/dashboard/applications/" + process.env.SPOTIFY_CLIENT_ID);
     }
 
-    await driver.wait(until.elementLocated(By.xpath("//button[@data-target='#settings-modal']")), DEFAULT_WAIT_MS).click();
+    await driver.wait(until.elementLocated(By.xpath("//a[text()='Settings']")), DEFAULT_WAIT_MS).click();
+    await driver.wait(until.elementLocated(By.xpath("//button[span[text()='Edit']]")), DEFAULT_WAIT_MS).click();
 
     // remove previous binding(s)
-    await new Promise(resolve => setTimeout(resolve, 1000)); // need to pause for a second
-    const prev_bindings = await driver.findElements(By.xpath("//form-list[@label='Redirect URIs']//a[@class='item-remove']"));
-    for (let i = 0; i < prev_bindings.length; i++) {
-        await prev_bindings[i].click();
-        await driver.wait(until.stalenessOf(prev_bindings[i]));
-    }
+    await driver.wait(until.elementLocated(By.xpath("//button[@aria-label='Remove redirect URI']")), DEFAULT_WAIT_MS).click();
 
-    await driver.findElement(By.id("newRedirectUri")).sendKeys(ngrokCallbackUrl);
-    await driver.findElement(By.xpath("//form-list[@label='Redirect URIs']//button[@ng-click='addItem()']")).click();
-    await driver.findElement(By.xpath("//button[@ng-click='update(application)']")).click();
-    await new Promise(resolve => setTimeout(resolve, 5000)); // delay before quitting to confirm save
+    // add new binding
+    await driver.findElement(By.id("redirect_uri")).sendKeys(ngrokCallbackUrl);
+    await driver.findElement(By.xpath("//button[@aria-label='Add redirect URI']")).click();
+
+    await driver.findElement(By.xpath("//button[span[text()='Save']]")).click();
+    await new Promise(resolve => setTimeout(resolve, 10000)); // delay before quitting to confirm save
 }
 
 (async () => {
