@@ -371,6 +371,15 @@ class Spotify {
         });
     }
 
+    async getQueue() {
+        if (!this.isAuthTokenValid()) {
+            await this.refreshAuthToken();
+        }
+        return await this.runTask(() => {
+            return this.api.getQueue();
+        });
+    }
+
     async pausePlayback() {
         if (!this.isAuthTokenValid()) {
             await this.refreshAuthToken();
