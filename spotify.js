@@ -196,7 +196,7 @@ class Spotify {
     async _getNgrokEndpoint() {
         await this.driver.get("http://localhost:" + process.env.NGROK_PORT + "/status");
         const ngrok_url = await this.driver.wait(until.elementLocated(By.xpath(
-            "//h4[text()='command_line']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
+            "//h4[text()='meta']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
         this.consoleInfo("ngrok URL:", ngrok_url);
         return ngrok_url;
     }

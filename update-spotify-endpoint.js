@@ -65,7 +65,7 @@ async function updateSpotifyCallback(driver, ngrokCallbackUrl) {
     try {
         await driver.get("http://localhost:" + process.env.NGROK_PORT + "/status");
         const ngrok_url = await driver.wait(until.elementLocated(By.xpath(
-            "//h4[text()='command_line']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
+            "//h4[text()='meta']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
         console.log("ngrok URL: " + ngrok_url);
 
         console.log("Updating callback URL in Spotify...");

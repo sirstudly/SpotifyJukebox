@@ -226,7 +226,7 @@ class Messenger {
 
     isTrackQueued(trackId) {
         let nowPlaying = spotify.getStatus();
-        if (nowPlaying.queued_tracks && nowPlaying.queued_tracks.length) {
+        if (nowPlaying && nowPlaying.queued_tracks && nowPlaying.queued_tracks.length) {
             return nowPlaying.queued_tracks.filter(t => t.id == trackId).length > 0;
         }
         return false;
