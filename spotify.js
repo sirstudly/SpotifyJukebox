@@ -529,28 +529,28 @@ class Spotify {
      * Register for updates on the Spotify websocket service.
      * @private
      */
-    async _registerForNotifications() {
-        if (!this.isWebAuthTokenValid()) {
-            await this.refreshWebAuthToken();
-        }
-        if (!this.spotifyConnectionId || !this.web_auth) {
-            throw new ReferenceError("Spotify connection not initialized.");
-        }
-        return agent.put("https://api.spotify.com/v1/me/notifications/user")
-            .auth(this.web_auth.access_token, {type: 'bearer'})
-            .set('Content-Type', 'application/json')
-            .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/78.0.3904.97 Safari/537.36')
-            .buffer(true) // because content-type isn't set in the response header, we need to get the raw text rather than the (parsed) body
-            .query({connection_id: this.spotifyConnectionId})
-            .then(resp => JSON.parse(resp.text))
-            .catch(err => {
-                this.consoleError("Failed to register for notifications.", err);
-                if (err.status === 401) { // Unauthorized
-                    this.refreshWebAuthToken();
-                }
-                throw err;
-            });
-    }
+    // async _registerForNotifications() {
+    //     if (!this.isWebAuthTokenValid()) {
+    //         await this.refreshWebAuthToken();
+    //     }
+    //     if (!this.spotifyConnectionId || !this.web_auth) {
+    //         throw new ReferenceError("Spotify connection not initialized.");
+    //     }
+    //     return agent.put("https://api.spotify.com/v1/me/notifications/user")
+    //         .auth(this.web_auth.access_token, {type: 'bearer'})
+    //         .set('Content-Type', 'application/json')
+    //         .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/78.0.3904.97 Safari/537.36')
+    //         .buffer(true) // because content-type isn't set in the response header, we need to get the raw text rather than the (parsed) body
+    //         .query({connection_id: this.spotifyConnectionId})
+    //         .then(resp => JSON.parse(resp.text))
+    //         .catch(err => {
+    //             this.consoleError("Failed to register for notifications.", err);
+    //             if (err.status === 401) { // Unauthorized
+    //                 this.refreshWebAuthToken();
+    //             }
+    //             throw err;
+    //         });
+    // }
 
     async _initWebsocket() {
         this.consoleInfo("WS: Initializing websocket to Spotify.");
@@ -563,19 +563,19 @@ class Spotify {
             this.consoleInfo('WS connected');
             this.ws.isAlive = true;
 
-            this.ws.interval = setInterval( () => {
-                if(this.ws.isAlive === false) {
-                    this.consoleInfo("WS: Did not receive echo back. Forcing disconnect.");
-                    return this.ws.close();
-                }
-                this.ws.isAlive = false;
-                this.consoleInfo("WS: sending ping...");
-                this.ws.send(JSON.stringify({"type":"ping"}));
-            }, 30000 );
+            // this.ws.interval = setInterval( () => {
+            //     if(this.ws.isAlive === false) {
+            //         this.consoleInfo("WS: Did not receive echo back. Forcing disconnect.");
+            //         return this.ws.close();
+            //     }
+            //     this.ws.isAlive = false;
+            //     this.consoleInfo("WS: sending ping...");
+            //     this.ws.send(JSON.stringify({"type":"ping"}));
+            // }, 30000 );
         }
         this.ws.onclose = () => {
             this.consoleInfo("WS: Disconnected!");
-            clearInterval(this.ws.interval);
+            // clearInterval(this.ws.interval);
             this.sleep(2000)
                 .then(() => this._initWebsocket()) // keepalive!
                 .catch(e => {
@@ -585,29 +585,29 @@ class Spotify {
         }
         this.ws.onmessage = async(event) => {
             const payload = JSON.parse(event.data);
-            if(payload.type === "pong") {
-                this.consoleInfo("WS: received echo back :)");
-                if (this.nowPlaying && Date.now() - this.nowPlaying.last_updated > 600000) {
-                    this.consoleInfo("Over 10 minutes since last update... forcing disconnect");
-                    this.nowPlaying.last_updated = Date.now();
-                    await this._verifyPlaybackState().catch(e => {
-                        this.consoleError("Failed to verify playback state: ", e);
-                    });
-                } else {
-                    this.ws.isAlive = true;
-                }
-            }
-            else {
+            // if(payload.type === "pong") {
+            //     this.consoleInfo("WS: received echo back :)");
+            //     if (this.nowPlaying && Date.now() - this.nowPlaying.last_updated > 600000) {
+            //         this.consoleInfo("Over 10 minutes since last update... forcing disconnect");
+            //         this.nowPlaying.last_updated = Date.now();
+            //         await this._verifyPlaybackState().catch(e => {
+            //             this.consoleError("Failed to verify playback state: ", e);
+            //         });
+            //     } else {
+            //         this.ws.isAlive = true;
+            //     }
+            // }
+            // else {
                 this.consoleInfo("WS message:", payload)
                 if(payload.headers['Spotify-Connection-Id']) {
                     try {
                         this.spotifyConnectionId = payload.headers['Spotify-Connection-Id'];
                         this.consoleInfo("WS initialized spotify-connection-id: " + this.spotifyConnectionId);
 
-                        let resp = await this._registerForNotifications();
-                        this.consoleInfo("WS notification registration response: ", resp);
+                        // let resp = await this._registerForNotifications();
+                        // this.consoleInfo("WS notification registration response: ", resp);
                         // this should now trigger events
-                        resp = await this._getConnectState();
+                        let resp = await this._getConnectState();
                         this.consoleInfo("WS connection state response: ", resp);
                         await this._updateNowPlaying(resp.player_state);
 
@@ -625,7 +625,7 @@ class Spotify {
                         }
                     }
                 }
-            }
+            // }
         }
     }
 
@@ -815,9 +815,9 @@ class Spotify {
         }
         else {
             this.consoleInfo("CHROME: No login button. Already logged in?");
-            const userLink = "//span[@data-testid='user-widget-name']";
+            const userLink = "//figure[@data-testid='user-widget-avatar']";
             const elem = await this.driver.wait(until.elementLocated(By.xpath(userLink)), DEFAULT_WAIT_MS);
-            const accountName = await elem.getText();
+            const accountName = await elem.getAttribute('title');
             this.consoleInfo("CHROME: Logged in as " + accountName);
         }
     }
