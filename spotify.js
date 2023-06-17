@@ -563,19 +563,19 @@ class Spotify {
             this.consoleInfo('WS connected');
             this.ws.isAlive = true;
 
-            // this.ws.interval = setInterval( () => {
-            //     if(this.ws.isAlive === false) {
-            //         this.consoleInfo("WS: Did not receive echo back. Forcing disconnect.");
-            //         return this.ws.close();
-            //     }
-            //     this.ws.isAlive = false;
-            //     this.consoleInfo("WS: sending ping...");
-            //     this.ws.send(JSON.stringify({"type":"ping"}));
-            // }, 30000 );
+            this.ws.interval = setInterval( () => {
+                if(this.ws.isAlive === false) {
+                    this.consoleInfo("WS: Did not receive echo back. Forcing disconnect.");
+                    return this.ws.close();
+                }
+                this.ws.isAlive = false;
+                this.consoleInfo("WS: sending ping...");
+                this.ws.send(JSON.stringify({"type":"ping"}));
+            }, 30000 );
         }
         this.ws.onclose = () => {
             this.consoleInfo("WS: Disconnected!");
-            // clearInterval(this.ws.interval);
+            clearInterval(this.ws.interval);
             this.sleep(2000)
                 .then(() => this._initWebsocket()) // keepalive!
                 .catch(e => {
@@ -585,19 +585,19 @@ class Spotify {
         }
         this.ws.onmessage = async(event) => {
             const payload = JSON.parse(event.data);
-            // if(payload.type === "pong") {
-            //     this.consoleInfo("WS: received echo back :)");
-            //     if (this.nowPlaying && Date.now() - this.nowPlaying.last_updated > 600000) {
-            //         this.consoleInfo("Over 10 minutes since last update... forcing disconnect");
-            //         this.nowPlaying.last_updated = Date.now();
-            //         await this._verifyPlaybackState().catch(e => {
-            //             this.consoleError("Failed to verify playback state: ", e);
-            //         });
-            //     } else {
-            //         this.ws.isAlive = true;
-            //     }
-            // }
-            // else {
+            if(payload.type === "pong") {
+                this.consoleInfo("WS: received echo back :)");
+                if (this.nowPlaying && Date.now() - this.nowPlaying.last_updated > 600000) {
+                    this.consoleInfo("Over 10 minutes since last update... forcing disconnect");
+                    this.nowPlaying.last_updated = Date.now();
+                    await this._verifyPlaybackState().catch(e => {
+                        this.consoleError("Failed to verify playback state: ", e);
+                    });
+                } else {
+                    this.ws.isAlive = true;
+                }
+            }
+            else {
                 this.consoleInfo("WS message:", payload)
                 if(payload.headers['Spotify-Connection-Id']) {
                     try {
@@ -625,7 +625,7 @@ class Spotify {
                         }
                     }
                 }
-            // }
+            }
         }
     }
 
