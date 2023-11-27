@@ -182,7 +182,8 @@ class Spotify {
 
     async _updateMessengerCallback() {
         await this.driver.get(`https://developers.facebook.com/apps/${process.env.MESSENGER_APP_ID}/messenger/settings/`);
-        await this.driver.wait(until.elementLocated(By.xpath("//div[contains(text(), 'Edit callback URL')]")), DEFAULT_WAIT_MS).click();
+        await this.driver.wait(until.elementLocated(By.xpath("//div[div[div[text()='1. Configure webhooks']]]/following-sibling::div/div/div/span/div/div[2]/div/div")), DEFAULT_WAIT_MS).click();
+        await this.driver.wait(until.elementLocated(By.xpath("//div[text()='Edit']")), DEFAULT_WAIT_MS).click();
         const endpoint = await this.driver.wait(until.elementLocated(By.xpath(
             "//input[@placeholder='Validation requests and Webhook notifications for this object will be sent to this URL.']")), DEFAULT_WAIT_MS);
         await this._clearWebElement(endpoint);
