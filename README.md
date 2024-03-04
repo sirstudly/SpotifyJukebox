@@ -2,6 +2,8 @@
 
 > This simple Node.js application is a demonstration of how to use the Facebook Messenger and Spotify APIs together to create a 'Jukebox Bot'.
 
+[![Jambot Demo](demo.gif)](demo.mp4)
+
 ## Update 2019-11-23
 
 This fork updates the original version which uses a custom "playlist" with one that does a true "queue" operation without altering the current playlist on Spotify. 
