@@ -13,17 +13,17 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "concurrent-queue": "^7.0.2",
-    "express": "^4.17.0",
-    "request": "^2.88.0",
-    "request-promise": "^4.2.4",
-    "selenium-webdriver": "^4.0.0-alpha.5",
+    "express": "^4.19.2",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
+    "selenium-webdriver": "^4.24.0",
     "spotify-web-api-node": "^5.0.2",
     "superagent": "^6.1.0",
     "superagent-debugger": "^1.2.9",
-    "websocket": "^1.0.32"
+    "websocket": "^1.0.35"
   },
   "devDependencies": {
-    "dotenv": "^8.0.0",
-    "patch-package": "^7.0.0"
+    "dotenv": "^8.6.0",
+    "patch-package": "^7.0.2"
   }
 }
