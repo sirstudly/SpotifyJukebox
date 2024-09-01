@@ -13,9 +13,16 @@ const DEFAULT_WAIT_MS = 30000;
  */
 async function updateSpotifyCallback(driver, ngrokCallbackUrl) {
     await driver.get("https://developer.spotify.com/dashboard/applications/" + process.env.SPOTIFY_CLIENT_ID);
-    if ((await driver.findElements(By.xpath("//button[text()='Log in']"))).length > 0) {
+
+    // may be redirected to login page if we haven't done this before...
+    const loginBtn = await driver.wait(until.elementLocated(By.xpath("//button[text()='Log in']")), DEFAULT_WAIT_MS)
+        .catch((e) => {
+            console.log("login button not found");
+            return null;
+        });
+    if (loginBtn) {
         const mainWindowHandle = await driver.getWindowHandle();
-        await driver.findElement(By.xpath("//button[text()='Log in']")).click();
+        await loginBtn.click();
         console.info("Waiting for login to Spotify");
         // switch to newly opened window
         const allHandles = await driver.getAllWindowHandles();
@@ -28,24 +35,36 @@ async function updateSpotifyCallback(driver, ngrokCallbackUrl) {
         if (process.env.SPOTIFY_USERNAME && loginFields.length > 0 ) {
             await driver.findElement(By.id("login-username")).sendKeys(process.env.SPOTIFY_USERNAME);
             await driver.findElement(By.id("login-password")).sendKeys(process.env.SPOTIFY_PASSWORD);
-            await driver.findElement(By.id("login-button")).click();
+            const loginBtn = await driver.findElement(By.id("login-button"));
+            await loginBtn.click();
+            await driver.wait(until.stalenessOf(loginBtn), DEFAULT_WAIT_MS);
             await driver.switchTo().window(mainWindowHandle);
         }
-        await driver.wait(until.urlIs("https://developer.spotify.com/dashboard/applications"), DEFAULT_WAIT_MS);
         await driver.get("https://developer.spotify.com/dashboard/applications/" + process.env.SPOTIFY_CLIENT_ID);
     }
 
     await driver.wait(until.elementLocated(By.xpath("//a[text()='Settings']")), DEFAULT_WAIT_MS).click();
-    await driver.wait(until.elementLocated(By.xpath("//button[span[text()='Edit']]")), DEFAULT_WAIT_MS).click();
+    const editBtn = await driver.wait(until.elementLocated(By.xpath("//button[span[text()='Edit']]")), DEFAULT_WAIT_MS);
+    await driver.executeScript("arguments[0].scrollIntoView(true);", editBtn);
+    await editBtn.click();
+    const newRedirectUri = await driver.wait(until.elementLocated(By.id("newRedirectUri")), DEFAULT_WAIT_MS);
 
-    // remove previous binding(s)
-    await driver.wait(until.elementLocated(By.xpath("//button[@aria-label='Remove redirect URI']")), DEFAULT_WAIT_MS).click();
+    // remove previous ngrok binding(s)
+    const prevBindings = await driver.findElements(By.xpath("//li[span[contains(text(), 'ngrok-free')]]/button"));
+    for (const prevBinding of prevBindings) {
+        await driver.executeScript("arguments[0].scrollIntoView(true);", prevBinding);
+        await prevBinding.click();
+    }
 
     // add new binding
-    await driver.findElement(By.id("redirect_uri")).sendKeys(ngrokCallbackUrl);
-    await driver.findElement(By.xpath("//button[@aria-label='Add redirect URI']")).click();
+    newRedirectUri.sendKeys(ngrokCallbackUrl);
+    const addRedirectUriBtn = await driver.findElement(By.xpath("//button[@aria-label='Add redirect URI']"));
+    await driver.executeScript("arguments[0].scrollIntoView(true);", addRedirectUriBtn);
+    await addRedirectUriBtn.click();
 
-    await driver.findElement(By.xpath("//button[span[text()='Save']]")).click();
+    const saveBtn = await driver.findElement(By.xpath("//button[span[text()='Save']]"));
+    await driver.executeScript("arguments[0].scrollIntoView(true);", saveBtn);
+    await saveBtn.click();
     await new Promise(resolve => setTimeout(resolve, 10000)); // delay before quitting to confirm save
 }
 
@@ -63,7 +82,7 @@ async function updateSpotifyCallback(driver, ngrokCallbackUrl) {
     try {
         await driver.get("http://localhost:" + process.env.NGROK_PORT + "/status");
         const ngrok_url = await driver.wait(until.elementLocated(By.xpath(
-            "//h4[text()='meta']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
+            "//h4[text()='meta' or text()='command_line']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
         console.log("ngrok URL: " + ngrok_url);
 
         console.log("Updating callback URL in Spotify...");

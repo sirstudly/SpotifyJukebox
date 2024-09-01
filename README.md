@@ -35,7 +35,7 @@ The included .env file contains placeholder keys which you will need to provide.
    * Send the following POST request:
 ```
 curl -X POST \
-  'https://graph.facebook.com/v9.0/me/messenger_profile?access_token=<FILL IN ACCESS TOKEN HERE>' \
+  'https://graph.facebook.com/v9.0/me/messenger_profile?access_token=EAAG5V9Xq0B8BAPlzxlJ6EbkuJ6fJnviMZCOBYGZA4KDizVIHKZBsxATqWmBbNecDUxF7pcm4GDjrHwPQXXYPhq2fAGLZCKmD8SgeLbIBvPbxtBMaPHWw5k2OxnhKgzv8wZBbAWmBrUmbV2aOAo6P3GddZCZBPCZAK1F3u63EDfpKfxoSOdt7NNZCp4JcbWM12dz8ZD' \
   -H 'Content-Type: application/json' \
   -d '{
     "get_started": {
@@ -44,9 +44,10 @@ curl -X POST \
     "greeting": [
         {
             "locale": "default",
-            "text": "Hi {{user_first_name}}! Just start typing your request and we'\''ll see what we have in our catalogue."
+            "text": "Hi {{user_first_name}}, just type the artist/song title and we'll send you back a list of suggestions. Type \"What's playing?\" at any time to see the current playlist.\nBegin your search with % for playlists. Only one playlist can be set at any time.\nSee also https://jambot.castlerockedinburgh.com/"
         }
     ],
+    "home_url": "https://jambot.castlerockedinburgh.com/",
     "persistent_menu": [
         {
             "locale": "default",

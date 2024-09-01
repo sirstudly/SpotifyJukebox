@@ -19,6 +19,7 @@
     "selenium-webdriver": "^4.0.0-alpha.5",
     "spotify-web-api-node": "^5.0.2",
     "superagent": "^6.1.0",
+    "superagent-debugger": "^1.2.9",
     "websocket": "^1.0.32"
   },
   "devDependencies": {

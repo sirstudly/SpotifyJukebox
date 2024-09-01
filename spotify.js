@@ -1,6 +1,7 @@
 const SpotifyWebApi = require("spotify-web-api-node");
 const W3CWebSocket = require('websocket').w3cwebsocket;
 const agent = require('superagent').agent();
+const superdebug = require('superagent-debugger');
 const {Builder, By, Key, until} = require('selenium-webdriver');
 const chrome = require("selenium-webdriver/chrome");
 const fs = require("fs");
@@ -86,7 +87,12 @@ class Spotify {
             .set('Content-Type', 'application/json')
             .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/78.0.3904.97 Safari/537.36')
             .set('Cookie', cookies)
+            .use(superdebug.default(console.info))
             .then(resp => {
+                this.consoleInfo("Get Web Access Token response:", resp);
+                if (resp.body.isAnonymous) { // anonymous should be equal to false if this was done correctly
+                    this.consoleError("Web Access Token may not have the correct privileges!")
+                }
                 return {
                     access_token: resp.body.accessToken,
                     expires_at: resp.body.accessTokenExpirationTimestampMs
@@ -99,26 +105,24 @@ class Spotify {
         await this.driver.get(authorizeUrl);
 
         // intermittent ERR_CONNECTION_CLOSED issue
-        await this.driver.findElements(By.id("reload-button")).then(e => {
-            for (const elem of e) {
-                this.consoleInfo("Page timeout? Clicking on reload.");
-                elem.click().then(() => this.loginToSpotifyWeb(authorizeUrl));
-            }
-        });
+        const reloadBtns = await this.driver.findElements(By.id("reload-button"));
+        for (const elem of reloadBtns) {
+            this.consoleInfo("Page timeout? Clicking on reload.");
+            await elem.click();
+            await this.loginToSpotifyWeb(authorizeUrl);
+        }
 
-        await this.driver.findElements(By.id("auth-accept")).then(e => {
-            for (const elem of e) {
-                this.consoleInfo("Spotify Authorization. Clicking on Accept");
-                elem.click();
-            }
-        });
+        const acceptBtns = await this.driver.findElements(By.id("auth-accept"));
+        for (const elem of acceptBtns) {
+            this.consoleInfo("Spotify Authorization. Clicking on Accept");
+            await elem.click();
+        }
 
         // authenticate if we have to authenticate
-        await this.driver.findElements(By.id("login-button")).then(e => {
-            if (e.length) {
-                this.doLogin()
-            }
-        });
+        const loginBtns = await this.driver.findElements(By.id("login-button"));
+        if (loginBtns.length) {
+            await this.doLogin()
+        }
         return Promise.resolve('OK');
     }
 
@@ -197,7 +201,7 @@ class Spotify {
     async _getNgrokEndpoint() {
         await this.driver.get("http://localhost:" + process.env.NGROK_PORT + "/status");
         const ngrok_url = await this.driver.wait(until.elementLocated(By.xpath(
-            "//h4[text()='meta']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
+            "//h4[text()='meta' or text()='command_line']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
         this.consoleInfo("ngrok URL:", ngrok_url);
         return ngrok_url;
     }
@@ -463,7 +467,7 @@ class Spotify {
         if (!this.isWebAuthTokenValid()) {
             await this.refreshWebAuthToken();
         }
-        return agent.post(`https://gew-spclient.spotify.com/connect-state/v1/player/command/from/${fromDeviceId}/to/${toDeviceId}`)
+        return agent.post(`https://gew1-spclient.spotify.com/connect-state/v1/player/command/from/${fromDeviceId}/to/${toDeviceId}`)
             .auth(this.web_auth.access_token, {type: 'bearer'})
             .set('Content-Type', 'application/json') // text/plain;charset=UTF-8 (in chrome web player)
             .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/78.0.3904.97 Safari/537.36')
@@ -509,17 +513,21 @@ class Spotify {
             throw new ReferenceError("Spotify connection not initialized.");
         }
         const webPlayerDeviceId = await this._getWebPlayerId();
-        return agent.put("https://gew-spclient.spotify.com/connect-state/v1/devices/hobs_" + webPlayerDeviceId.substr(0, 35))
+        return agent.put("https://gew1-spclient.spotify.com/connect-state/v1/devices/hobs_" + webPlayerDeviceId.substr(0, 35))
             .auth(this.web_auth.access_token, {type: 'bearer'})
+            .use(superdebug.default(console.info))
             .set('Content-Type', 'application/json')
             .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/78.0.3904.97 Safari/537.36')
             .set('X-Spotify-Connection-Id', this.spotifyConnectionId)
             .buffer(true) // because content-type isn't set in the response header, we need to get the raw text rather than the (parsed) body
             .send({
                 member_type: "CONNECT_STATE",
-                device: {device_info: {capabilities: {can_be_player: false, hidden: true}}}
+                device: {device_info: {capabilities: {can_be_player: false, hidden: true, needs_full_player_state: true}}}
             })
-            .then(resp => JSON.parse(resp.text))
+            .then(resp => {
+                this.consoleInfo(resp.text)
+                return JSON.parse(resp.text)
+            })
             .catch(err => {
                 this.consoleError("Failed to retrieve connection state.", err);
                 throw err;
@@ -808,19 +816,20 @@ class Spotify {
 
     async verifyLoggedIn() {
         await this.driver.get("https://open.spotify.com/browse/featured#_=_");
-        const loginButtons = await this.driver.findElements(By.xpath("//button[normalize-space()='Log in']"));
-        if( loginButtons.length ) {
-            await loginButtons[0].click();
-            await this.driver.wait(until.stalenessOf(loginButtons[0]), DEFAULT_WAIT_MS);
-            await this.doLogin();
-        }
-        else {
-            this.consoleInfo("CHROME: No login button. Already logged in?");
-            const userLink = "//figure[@data-testid='user-widget-avatar']";
-            const elem = await this.driver.wait(until.elementLocated(By.xpath(userLink)), DEFAULT_WAIT_MS);
-            const accountName = await elem.getAttribute('title');
-            this.consoleInfo("CHROME: Logged in as " + accountName);
-        }
+        await this.driver.wait(until.elementLocated(By.xpath("//button[normalize-space()='Log in']")), DEFAULT_WAIT_MS)
+            .then(async (btn) => {
+                this.consoleInfo("CHROME: Logging into Spotify");
+                await btn.click();
+                await this.driver.wait(until.stalenessOf(btn), DEFAULT_WAIT_MS);
+                await this.doLogin();
+            })
+            .catch(async () => {
+                this.consoleInfo("CHROME: No login button. Already logged in?");
+                const userLink = "//button[@data-testid='user-widget-link']";
+                const elem = await this.driver.wait(until.elementLocated(By.xpath(userLink)), DEFAULT_WAIT_MS);
+                const accountName = await elem.getAttribute('aria-label');
+                this.consoleInfo("CHROME: Logged in as " + accountName);
+            });
     }
 
     async doLogin() {
