@@ -121,6 +121,18 @@ class Messenger {
                     await this.sendMessage(event.sender.id, {text: "This track has already been queued."});
                     break;
                 }
+                else if (await this.isTrackBlacklisted(payload.track)) {
+                    if (process.env.USER_WARNLIST && process.env.USER_WARNLIST.includes(event.sender.id)) {
+                        await this.sendMessage(event.sender.id, {text: "Haha.. nice one."});
+                        this.consoleInfo("Blacklisting user " + event.sender.id);
+                        process.env.USER_BLACKLIST += "," + event.sender.id;
+                    }
+                    else {
+                        await this.sendMessage(event.sender.id, {text: "Do you want to get banned? This is how you get banned..."});
+                        process.env.USER_WARNLIST += "," + event.sender.id
+                    }
+                    break;
+                }
                 this.sendTypingIndicator(event.sender.id, true);
                 await spotify.queueTrack("spotify:track:" + payload.track).then( () => {
                     this.sendMessage(event.sender.id, {text: "Thanks! Your track has been submitted."});
@@ -220,6 +232,16 @@ class Messenger {
         if (process.env.USER_BLACKLIST && process.env.USER_BLACKLIST.includes(sender)) {
             this.sendMessage(sender, {text: "Yeah, nah... I don't think so. You're a bit of a twat."});
             return true;
+        }
+        return false;
+    }
+
+    async isTrackBlacklisted(trackId) {
+        if (process.env.TRACK_BLACKLIST_REGEX) {
+            const track = await spotify.getTrack(trackId);
+            if (new RegExp(process.env.TRACK_BLACKLIST_REGEX, 'i').test(track.name)) {
+                return true;
+            }
         }
         return false;
     }
