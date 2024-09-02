@@ -35,7 +35,7 @@ The included .env file contains placeholder keys which you will need to provide.
    * Send the following POST request:
 ```
 curl -X POST \
-  'https://graph.facebook.com/v9.0/me/messenger_profile?access_token=EAAG5V9Xq0B8BAPlzxlJ6EbkuJ6fJnviMZCOBYGZA4KDizVIHKZBsxATqWmBbNecDUxF7pcm4GDjrHwPQXXYPhq2fAGLZCKmD8SgeLbIBvPbxtBMaPHWw5k2OxnhKgzv8wZBbAWmBrUmbV2aOAo6P3GddZCZBPCZAK1F3u63EDfpKfxoSOdt7NNZCp4JcbWM12dz8ZD' \
+  'https://graph.facebook.com/v9.0/me/messenger_profile?access_token=<FILL IN ACCESS TOKEN HERE>' \
   -H 'Content-Type: application/json' \
   -d '{
     "get_started": {
