@@ -6,6 +6,8 @@ const {Builder, By, Key, until} = require('selenium-webdriver');
 const chrome = require("selenium-webdriver/chrome");
 const fs = require("fs");
 const cq = require('concurrent-queue');
+const errorLog = require('./logger').errorlogger;
+const infoLog = require('./logger').infoLogger;
 const dotenv = require("dotenv");
 dotenv.config();
 const DEFAULT_WAIT_MS = 30000;
@@ -87,9 +89,9 @@ class Spotify {
             .set('Content-Type', 'application/json')
             .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/78.0.3904.97 Safari/537.36')
             .set('Cookie', cookies)
-            .use(superdebug.default(console.info))
+            .use(superdebug.default(this.consoleInfo))
             .then(resp => {
-                this.consoleInfo("Get Web Access Token response:", resp);
+                this.consoleInfo("Get Web Access Token response: %s", resp.text);
                 if (resp.body.isAnonymous) { // anonymous should be equal to false if this was done correctly
                     this.consoleError("Web Access Token may not have the correct privileges!")
                 }
@@ -98,7 +100,7 @@ class Spotify {
                     expires_at: resp.body.accessTokenExpirationTimestampMs
                 }
             });
-        this.consoleInfo("Web Access Token:", this.web_auth);
+        this.consoleInfo("Web Access Token: %s", this.web_auth);
     }
 
     async loginToSpotifyWeb(authorizeUrl) {
@@ -161,7 +163,7 @@ class Spotify {
         this.auth.expires_at = expiresAt;
 
         this.api.setAccessToken(result.body.access_token);
-        this.consoleInfo("Access Token:", result.body.access_token);
+        this.consoleInfo("Access Token: %s", result.body.access_token);
     }
 
     async receivedAuthCode(authCode) {
@@ -177,7 +179,7 @@ class Spotify {
         // Provide the Spotify library with the tokens
         this.api.setAccessToken(this.auth.access_token);
         this.api.setRefreshToken(this.auth.refresh_token);
-        this.consoleInfo("Access Token:", this.auth.access_token);
+        this.consoleInfo("Access Token: %s", this.auth.access_token);
     }
 
     updateMessengerCallback() {
@@ -202,7 +204,7 @@ class Spotify {
         await this.driver.get("http://localhost:" + process.env.NGROK_PORT + "/status");
         const ngrok_url = await this.driver.wait(until.elementLocated(By.xpath(
             "//h4[text()='meta' or text()='command_line']/../div/table/tbody/tr[th[text()='URL']]/td")), DEFAULT_WAIT_MS).getText();
-        this.consoleInfo("ngrok URL:", ngrok_url);
+        this.consoleInfo("ngrok URL: %s", ngrok_url);
         return ngrok_url;
     }
 
@@ -362,7 +364,7 @@ class Spotify {
             await this._verifyPlaybackState();
             const result = await this.api.addToQueue(trackURI,
                 {device_id: process.env.SPOTIFY_PREFERRED_DEVICE_ID});
-            this.consoleInfo("Queued track response:", result);
+            this.consoleInfo("Queued track response: %s", result);
             return result;
         });
     }
@@ -434,7 +436,7 @@ class Spotify {
                 const webPlayerId = await this._getWebPlayerId();
                 response = await this._play(uri, webPlayerId, process.env.SPOTIFY_PREFERRED_DEVICE_ID);
             }
-            this.consoleInfo("play response:", response);
+            this.consoleInfo("play response: %s", response);
             await this.forceRepeatShuffle();
             return response;
         });
@@ -515,7 +517,7 @@ class Spotify {
         const webPlayerDeviceId = await this._getWebPlayerId();
         return agent.put("https://gew1-spclient.spotify.com/connect-state/v1/devices/hobs_" + webPlayerDeviceId.substr(0, 35))
             .auth(this.web_auth.access_token, {type: 'bearer'})
-            .use(superdebug.default(console.info))
+            .use(superdebug.default(this.consoleInfo))
             .set('Content-Type', 'application/json')
             .set('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/78.0.3904.97 Safari/537.36')
             .set('X-Spotify-Connection-Id', this.spotifyConnectionId)
@@ -525,7 +527,7 @@ class Spotify {
                 device: {device_info: {capabilities: {can_be_player: false, hidden: true, needs_full_player_state: true}}}
             })
             .then(resp => {
-                this.consoleInfo(resp.text)
+                this.consoleInfo("CONNECT_STATE: %s", resp.text)
                 return JSON.parse(resp.text)
             })
             .catch(err => {
@@ -607,7 +609,7 @@ class Spotify {
                 }
             }
             else {
-                this.consoleInfo("WS message:", payload)
+                this.consoleInfo("WS message: %O", payload)
                 if(payload.headers['Spotify-Connection-Id']) {
                     try {
                         this.spotifyConnectionId = payload.headers['Spotify-Connection-Id'];
@@ -617,7 +619,7 @@ class Spotify {
                         // this.consoleInfo("WS notification registration response: ", resp);
                         // this should now trigger events
                         let resp = await this._getConnectState();
-                        this.consoleInfo("WS connection state response: ", resp);
+                        this.consoleInfo("WS connection state response: %O", resp);
                         await this._updateNowPlaying(resp.player_state);
 
                     } catch (ex) {
@@ -667,7 +669,7 @@ class Spotify {
                 queued_tracks: tracks.slice(1).map(t => getTrackInfo(t)),
                 context: await this._getCurrentContext(playerState.context_uri)
             };
-            this.consoleInfo("Now Playing:", this.nowPlaying);
+            this.consoleInfo("Now Playing: %O", this.nowPlaying);
         }
         else {
             this.consoleInfo("No track information found in player state. Now playing not updated.");
@@ -810,7 +812,7 @@ class Spotify {
                 uri: contextUri
             };
         }
-        this.consoleError("Unable to determine context from URI: " + contextUri)
+        this.consoleError("Unable to determine context from URI: %s" + contextUri)
         return Promise.resolve(null);
     }
 
@@ -896,15 +898,11 @@ class Spotify {
     }
 
     consoleInfo(...args) {
-        const arg_copy = [...args];
-        arg_copy.splice(0, 0, new Date().toLocaleString())
-        console.info(...arg_copy);
+        infoLog.info(...args);
     }
 
     consoleError(...args) {
-        const arg_copy = [...args];
-        arg_copy.splice(0, 0, new Date().toLocaleString())
-        console.error(...arg_copy);
+        errorLog.error(args);
     }
 }
 

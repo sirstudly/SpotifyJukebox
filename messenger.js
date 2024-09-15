@@ -1,5 +1,7 @@
 const spotify = require("./spotify");
 const Request = require("request-promise");
+const errorLog = require('./logger').errorlogger;
+const infoLog = require('./logger').infoLogger;
 
 const Commands = {
     ADD_TRACK: "ADD_TRACK",
@@ -124,7 +126,7 @@ class Messenger {
                 else if (await this.isTrackBlacklisted(payload.track)) {
                     if (process.env.USER_WARNLIST && process.env.USER_WARNLIST.includes(event.sender.id)) {
                         await this.sendMessage(event.sender.id, {text: "Haha.. nice one."});
-                        this.consoleInfo("Blacklisting user " + event.sender.id);
+                        this.consoleError("Blacklisting user " + event.sender.id);
                         process.env.USER_BLACKLIST += "," + event.sender.id;
                     }
                     else {
@@ -886,7 +888,7 @@ class Messenger {
             else {
                 await spotify.setVolume(volume)
                     .then(resp => {
-                        this.consoleInfo("Volume response:", resp);
+                        this.consoleInfo("Volume response: %s", resp);
                         this.sendMessage(sender, {text: "Volume set."});
                     })
                     .catch(error => {
@@ -1092,15 +1094,11 @@ class Messenger {
     }
 
     consoleInfo(...args) {
-        const arg_copy = [...args];
-        arg_copy.splice(0, 0, new Date().toLocaleString())
-        console.info(...arg_copy);
+        infoLog.info(...args);
     }
 
     consoleError(...args) {
-        const arg_copy = [...args];
-        arg_copy.splice(0, 0, new Date().toLocaleString())
-        console.error(...arg_copy);
+        errorLog.error(...args);
     }
 }
 
